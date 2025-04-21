@@ -4,8 +4,8 @@ from datetime import datetime
 from io import BytesIO
 import re
 
-st.set_page_config(page_title="Generator SK Otomatis", layout="wide")
-st.title("📄 Generator Surat Keputusan (SK) Otomatis")
+st.set_page_config(page_title="Generator SK Otomatis BPS Kota Tegal", layout="wide")
+st.title("📄 Generator Surat Keputusan (SK) Otomatis BPS Kota Tegal")
 
 def kapital_awal_dengan_akronim(text):
     def smart_cap(word):
