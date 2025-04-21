@@ -2,16 +2,11 @@ import streamlit as st
 from docxtpl import DocxTemplate
 from datetime import datetime
 from io import BytesIO
-import base64
 import re
-import os
-import tempfile
-import subprocess
 
 st.set_page_config(page_title="Generator SK Otomatis", layout="wide")
 st.title("📄 Generator Surat Keputusan (SK) Otomatis")
 
-# Fungsi kapitalisasi pintar (mempertahankan huruf besar dalam tanda kurung)
 def kapital_awal_dengan_akronim(text):
     def smart_cap(word):
         if re.match(r"\(.*\)", word):
@@ -19,9 +14,9 @@ def kapital_awal_dengan_akronim(text):
         return word.capitalize()
     return " ".join([smart_cap(w) for w in text.split()])
 
-# Inisialisasi state untuk anggota
+# Inisialisasi session state
 if "jumlah_anggota" not in st.session_state:
-    st.session_state.jumlah_anggota = 3  # default 3 anggota
+    st.session_state.jumlah_anggota = 3
 if "anggota_nama" not in st.session_state:
     st.session_state.anggota_nama = [""] * st.session_state.jumlah_anggota
 
@@ -36,14 +31,14 @@ def hapus_anggota():
 
 with st.form("form_sk"):
     st.subheader("📝 Informasi Umum")
-    st.markdown("*Nomor Surat*  \n<sub><i>Contoh: 118/33760/SK/TAHUN 2025</i></sub>", unsafe_allow_html=True)
+    st.markdown("Nomor Surat  \n<sub><i>Contoh: 118/33760/SK/TAHUN 2025</i></sub>", unsafe_allow_html=True)
     no_surat = st.text_input("", key="no_surat", label_visibility="collapsed")
-    st.markdown("*Nama Tim (untuk kapitalisasi otomatis)*  \n<sub><i>Contoh: TIM KOORDINASI SISTEM PEMERINTAHAN BERBASIS ELEKTRONIK (SPBE)</i></sub>", unsafe_allow_html=True)
+    st.markdown("Nama Tim (untuk kapitalisasi otomatis)  \n<sub><i>Contoh: TIM KOORDINASI SISTEM PEMERINTAHAN BERBASIS ELEKTRONIK (SPBE)</i></sub>", unsafe_allow_html=True)
     nama_tim = st.text_input("", key="nama_tim", label_visibility="collapsed")
-    st.markdown("*Sebutan Nama Tim*  \n<sub><i>Contoh: Tim Koordinasi SPBE</i></sub>", unsafe_allow_html=True)
+    st.markdown("Sebutan Nama Tim  \n<sub><i>Contoh: Tim Koordinasi SPBE</i></sub>", unsafe_allow_html=True)
     sebutan_nama_tim = st.text_input("", key="sebutan_nama_tim", label_visibility="collapsed")
     tahun = st.text_input("Tahun", value=str(datetime.today().year))
-    st.markdown("*Nama Kegiatan*  \n<sub><i>Contoh: SPBE</i></sub>", unsafe_allow_html=True)
+    st.markdown("Nama Kegiatan  \n<sub><i>Contoh: SPBE</i></sub>", unsafe_allow_html=True)
     nama_kegiatan = st.text_input("", key="nama_kegiatan", label_visibility="collapsed")
     tanggal = st.date_input("Tanggal SK", value=datetime.today())
 
@@ -75,8 +70,6 @@ if submitted:
                 "index": i + 1
             })
 
-    st.success("✅ SK berhasil dibuat!")
-
     context = {
         "NO_SURAT": no_surat,
         "NAMA_TIM_KAPITAL": nama_tim.upper(),
@@ -93,25 +86,14 @@ if submitted:
     doc = DocxTemplate("template_sk.docx")
     doc.render(context)
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp_docx:
-        doc.save(tmp_docx.name)
-        tmp_docx_path = tmp_docx.name
+    output = BytesIO()
+    doc.save(output)
+    output.seek(0)
 
-    # Konversi ke PDF menggunakan pandoc
-    tmp_pdf_path = tmp_docx_path.replace(".docx", ".pdf")
-    try:
-        subprocess.run(['pandoc', tmp_docx_path, '-o', tmp_pdf_path], check=True)
-    except subprocess.CalledProcessError as e:
-        st.error("❌ Gagal mengonversi DOCX ke PDF. Pastikan `pandoc` telah terinstal di sistem.")
-        st.stop()
-
-    # Download link
-    with open(tmp_pdf_path, "rb") as f:
-        pdf_bytes = f.read()
-        b64_pdf = base64.b64encode(pdf_bytes).decode()
-        file_name = f"SK_{nama_tim.replace(' ', '_')}.pdf"
-        href = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{file_name}">📥 Download SK (PDF)</a>'
-        st.markdown(href, unsafe_allow_html=True)
-
-    os.remove(tmp_docx_path)
-    os.remove(tmp_pdf_path)
+    file_name = f"SK_{nama_tim.replace(' ', '_')}.docx"
+    st.download_button(
+        label="📥 Download SK (Word)",
+        data=output,
+        file_name=file_name,
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
