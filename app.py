@@ -6,7 +6,7 @@ import base64
 import re
 import os
 import tempfile
-from docx2pdf import convert
+import subprocess
 
 st.set_page_config(page_title="Generator SK Otomatis", layout="wide")
 st.title("📄 Generator Surat Keputusan (SK) Otomatis")
@@ -52,7 +52,6 @@ with st.form("form_sk"):
     nama_kor = st.text_input("Nama Koordinator")
 
     st.subheader("👥 Daftar Anggota")
-
     for i in range(st.session_state.jumlah_anggota):
         st.session_state.anggota_nama[i] = st.text_input(
             f"Nama Anggota {i+1}", value=st.session_state.anggota_nama[i], key=f"anggota_{i}"
@@ -98,9 +97,15 @@ if submitted:
         doc.save(tmp_docx.name)
         tmp_docx_path = tmp_docx.name
 
+    # Konversi ke PDF menggunakan pandoc
     tmp_pdf_path = tmp_docx_path.replace(".docx", ".pdf")
-    convert(tmp_docx_path, tmp_pdf_path)
+    try:
+        subprocess.run(['pandoc', tmp_docx_path, '-o', tmp_pdf_path], check=True)
+    except subprocess.CalledProcessError as e:
+        st.error("❌ Gagal mengonversi DOCX ke PDF. Pastikan `pandoc` telah terinstal di sistem.")
+        st.stop()
 
+    # Download link
     with open(tmp_pdf_path, "rb") as f:
         pdf_bytes = f.read()
         b64_pdf = base64.b64encode(pdf_bytes).decode()
