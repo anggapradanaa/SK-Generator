@@ -1,2 +1,0 @@
-pandoc
-texlive-xetex
